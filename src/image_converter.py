@@ -11,8 +11,10 @@
  5寸照片（横版）：1500*1050
  6寸照片（横版）：1800*1200
  """
-from PIL import Image, ImageDraw
+import os
+from PIL import Image, ImageDraw, ImageTk
 import tkinter as tk
+from tkinter import filedialog
 
 WIDTH_1IN = 295
 HEIGHT_1IN = 413
@@ -26,6 +28,8 @@ HEIGHT_5IN = 1050
 # 非全景6寸照片
 WIDTH_6IN = 1950
 HEIGHT_6IN = 1300
+
+BASEDIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def cut_photo_with_rate(photo: Image.Image, width: int, height: int):
@@ -130,7 +134,7 @@ def layout_photo_5_mix(photo1, photo2):
     """
     在5寸照片上混合排版1寸、2寸照片
     :param photo1: 待处理照片1寸
-    :param photo1: 待处理照片2寸
+    :param photo2: 待处理照片2寸
     :return: 处理后的照片
     """
     bk = Image.new("RGB", [WIDTH_5IN, HEIGHT_5IN], (255, 255, 255))
@@ -224,11 +228,11 @@ def layout_photo_6_2(photo):
     return bk
 
 
-def layout_photo_6_mix1(photo1, photo2):
+def layout_photo_6_mix(photo1, photo2):
     """
     在6寸照片上混合排版1寸、2寸照片
     :param photo1: 待处理照片1寸
-    :param photo1: 待处理照片2寸
+    :param photo2: 待处理照片2寸
     :return: 处理后的照片
     """
     bk = Image.new("RGB", (WIDTH_6IN, HEIGHT_6IN), (255, 255, 255))
@@ -266,99 +270,23 @@ def layout_photo_6_mix1(photo1, photo2):
     return bk
 
 
-def layout_photo_6_mix2(photo1, photo2):
-    """
-    在6寸照片上混合排版1寸、2寸照片
-    :param photo1: 待处理照片1寸
-    :param photo1: 待处理照片2寸
-    :return: 处理后的照片
-    """
-    bk = Image.new("RGB", (HEIGHT_6IN, WIDTH_6IN), (255, 255, 255))  # 竖版排版
-    # 创建画笔
-    draw = ImageDraw.Draw(bk)
+def convert_image(source, idInch, photoInch):
+    im = Image.open(source)
+    photo1 = resize_photo(cut_photo(im, 1), 1)
+    photo2 = resize_photo(cut_photo(im, 2), 2)
+    if idInch == '1' or idInch == '2':
+        fun_name = f'layout_photo_{photoInch}_{idInch}'
+        file_path = os.path.join(BASEDIR, f'{photoInch}_{idInch}.jpg')
+        globals()[fun_name](photo1 if idInch == '1' else photo2).save(
+            file_path)
+    else:
+        fun_name = f'layout_photo_{photoInch}_mix'
+        file_path = os.path.join(BASEDIR, f'{photoInch}_mix.jpg')
+        globals()[fun_name](photo1, photo2).save(file_path)
 
-    draw.line([(350, 0), (350, WIDTH_6IN)], fill=128)  # 竖线
-    draw.line([(700, 0), (700, WIDTH_6IN)], fill=128)  # 竖线
-
-    draw.line([(0, WIDTH_6IN * 0.25), (700, WIDTH_6IN * 0.25)],
-              fill=128)  # 横线1
-    draw.line([(0, WIDTH_6IN * 0.5), (700, WIDTH_6IN * 0.5)], fill=128)  # 横线2
-    draw.line([(0, WIDTH_6IN * 0.75), (700, WIDTH_6IN * 0.75)],
-              fill=128)  # 横线3
-    draw.line([(700, WIDTH_6IN / 3), (HEIGHT_6IN, WIDTH_6IN / 3)],
-              fill=128)  # 横线4
-    draw.line([(700, WIDTH_6IN * 2 / 3), (HEIGHT_6IN, WIDTH_6IN * 2 / 3)],
-              fill=128)  # 横线5
-
-    focus_point = [0.5 * 350, 0.125 * WIDTH_6IN]
-    start_point = [
-        focus_point[0] - 0.5 * WIDTH_1IN, focus_point[1] - 0.5 * HEIGHT_1IN
-    ]
-
-    # print(focus_point,start_point)
-    for i in range(0, 4):
-        for k in range(0, 2):
-            bk.paste(photo1, (int(start_point[0] + (k * 350)),
-                              int(start_point[1] + i * 0.25 * WIDTH_6IN)))
-
-    focus_point2 = [0.5 * HEIGHT_6IN + 350, WIDTH_6IN / 6]
-    start_point2 = [
-        focus_point2[0] - 0.5 * WIDTH_2IN, focus_point2[1] - 0.5 * HEIGHT_2IN
-    ]
-    for i in range(0, 3):
-        bk.paste(
-            photo2,
-            (int(start_point2[0]), int(start_point2[1] + i * WIDTH_6IN / 3)))
-    return bk
+    return file_path
 
 
-class Window(tk.Frame):
-    def __init__(self, master=None):
-        super().__init__(master)
-        self.master = master
-        self.pack()
-
-        self.create_menus()
-        self.create_widgets()
-
-    def create_menus(self):
-        menu = tk.Menu(self.master)
-        self.master.config(menu=menu)
-
-        fileMenu = tk.Menu(menu)
-        menu.add_cascade(label="File", menu=fileMenu)
-
-        editMenu = tk.Menu(menu)
-        menu.add_cascade(label="Edit", menu=editMenu)
-
-        fileMenu.add_command(label="Item")
-        fileMenu.add_command(label="Exit")
-        editMenu.add_command(label="Undo")
-        editMenu.add_command(label="Redo")
-
-    def create_widgets(self):
-        self.hi_there = tk.Button(self)
-        self.hi_there["text"] = "Hello World\n(click me)"
-        self.hi_there["command"] = self.say_hi
-        self.hi_there.pack(side="top")
-
-        self.quit = tk.Button(self,
-                              text="QUIT",
-                              fg="red",
-                              command=self.master.destroy)
-        self.quit.pack(side="bottom")
-
-    def say_hi(self):
-        print("hi there, everyone!")
-
-
-root = tk.Tk()
-app = Window(master=root)
-root.wm_title("Tkinter button")
-root.geometry("320x200")
-app.mainloop()
-
-# im = Image.open('../assets/test.jpg')
 # layout_photo_5_1(resize_photo(cut_photo(im, 1), 1)).save('5_1.jpg')
 # layout_photo_5_2(resize_photo(cut_photo(im, 2), 2)).save('5_2.jpg')
 # layout_photo_6_1(resize_photo(cut_photo(im, 1), 1)).save('6_1.jpg')
