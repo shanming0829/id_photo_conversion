@@ -1,26 +1,37 @@
-const { app, BrowserWindow } = require('electron');
+const {app, protocol, BrowserWindow} = require('electron');
 const path = require('path');
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
-if (require('electron-squirrel-startup')) { // eslint-disable-line global-require
+// eslint-disable-line global-require
+if (require('electron-squirrel-startup')) {
   app.quit();
 }
 
 const createWindow = () => {
+  // 注册FileProtocol
+  protocol.registerFileProtocol('file', (req, callback) => {
+    const url = decodeURI(req.url.substr(8));
+    // 使用callback获取真正指向内容
+    callback({path: path.normalize(url)});
+  }, (error) => {
+    if (error) console.error('Failed to register protocol');
+  });
+
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
-    webPreferences: { 
+    webPreferences: {
       webSecurity: false,
-    }
+      nodeIntegration: true,
+    },
   });
 
   // and load the index.html of the app.
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
 
   // Open the DevTools.
-  mainWindow.webContents.openDevTools();
+  // mainWindow.webContents.openDevTools();
 };
 
 // This method will be called when Electron has finished
