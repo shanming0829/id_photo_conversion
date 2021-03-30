@@ -18,5 +18,11 @@
         "react"
     ],
     "rules": {
+        "max-len": [
+            "warn",
+            {
+                "code": 120
+            }
+        ]
     }
 }
